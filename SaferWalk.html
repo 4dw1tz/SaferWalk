@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="keywords" content="safety, night walk, walk alone, safest route, safe route planner">
+    <title>SaferWalk</title>
+    <link rel="icon" type="image/png" href="Mini Logo.png"> <!--This creates a site favicon-->
+    <link rel="stylesheet" href="SaferWalk.css">
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB1Y9UzcYYZMbr9LmuMh18Ig2fPKUWs7hg&callback=initMap" async defer></script>
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="#" class="logo">SaferWalk<img src="Mini Logo.png" style="padding-left: 8%; padding-bottom: 0.5cm;" height="50 vh"></a>
+            <ul class="nav-links">
+                <li><a href="#">Features</a></li>
+                <li><a href="#">FAQ</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div>
+                <h1>Your Trusted Companion</h1>
+                <h4>Walk with confidence knowing you are on the safest route to your destination.</h4><br>
+                    <label>Enter your destination to get started!</label>
+                    <div>
+                        <input type="text" id="destination-input" style="border-radius: 20px;" placeholder=" e.g. GL51 0HG"><br>
+                        <button id="destination-button" onclick="Entered(document.getElementById('destination-input').value.trim())" style="margin-top: 0.2cm; background-color: aquamarine; border-radius: 20px; padding: 10px 20px;">Enter</button>
+                    </div>
+            </div>
+        </section>
+
+        <section class="map-section">
+            <div id="minimap">
+                <iframe src="https://maps.google.com/maps?q=your-location&t=&z=13&ie=UTF8&iwloc=&output=embed" width="100%" height="400 vh" frameborder="0" scrolling="no"></iframe>       
+            </div>
+        </section>
+        <div id="map">
+        </div>
+        <div id="container" style="background-image: url(Maps\ BG.png);">
+            <h2 class="Manual" style="color: orange;">Or...</h2>
+            <h3 class="Manual" style="color: white;">Enter a starting point here</h3>
+            <div class="destination-input-group">
+                <input type="text" id="location-input" style="border-radius: 20px;" placeholder=" e.g. GL51 0HG">
+                <button id="location-button" onclick="ManLoc(document.getElementById('location-input').value.trim())" style="background-color: aquamarine; margin-top: 0.2cm; border-radius: 20px; padding: 1px 20px;">Enter</button>
+        </div>
+    </main>
+    <footer>
+        <br>
+        <p style="color: black;">&copy;SaferWalk Initiatives. Created by Adwit Mukherji.</p>
+    </footer>
+<script src="Crimes.js"></script>
+<script src="SaferWalk.js"></script>
+</body>
+</html>
