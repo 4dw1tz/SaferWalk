@@ -1,8 +1,10 @@
 //Declared the following as global variables/ objects
-var map, infoWindow, pos, destination, check1, check2;
+var map, infoWindow, locationButton, pos, destination, check1, check2, user;
 //check2 represents if the user location has been obtained and check1 represents if destination has been inputted
 var check1=false;
 var check2=false;
+var contacts = []
+var fr = false
 
 //Have to use callback instead of return as geocoder.geocode() is from the Google Maps API script which is linked asynchronously
 function getCoordinates(address, callback) {  
@@ -53,12 +55,11 @@ function initMap() { //Instantiates a map object from the Google Maps API map cl
   infoWindow = new google.maps.InfoWindow();
 
   //Adds the button the user can click to retrieve their current location using geolocation service
-  const locationButton = document.createElement("button");
+  locationButton = document.createElement("button");
   locationButton.textContent = "Get Current Location";
   locationButton.classList.add("custom-map-control-button");
-  map.controls[google.maps.ControlPosition.TOP_CENTER].push(
-    locationButton
-  );
+  map.controls[google.maps.ControlPosition.TOP_CENTER].push(locationButton);
+
   //EventListener used here to respond to click instead of onclick property Defines the function straight away.
   locationButton.addEventListener("click", () => {
     if (navigator.geolocation) {
@@ -70,7 +71,7 @@ function initMap() { //Instantiates a map object from the Google Maps API map cl
           };
 
           infoWindow.setPosition(pos);
-          infoWindow.setContent('<div style="color:black"> Origin </div>');
+          infoWindow.setContent('<div style="color:black"> Location </div>');
           console.log("Location:", pos.lat, pos.lng);
           //Makes sure the user is in one of the areas SaferWalk works in
           reverseGeocode(pos.lat, pos.lng, function(address) {
@@ -80,6 +81,7 @@ function initMap() { //Instantiates a map object from the Google Maps API map cl
             }
             else{
               check2=true;
+              fr=true
               infoWindow.open(map);
               map.setCenter(pos);
               map.setZoom(15);
@@ -100,6 +102,7 @@ function initMap() { //Instantiates a map object from the Google Maps API map cl
 }
 function handleLocationError(browserHasGeolocation, infoWindow, pos) {
   //This handles the error that occurs in the event that the user's GPS couldn't be accessed so they input a starting point manually.
+  fr=false
   container.innerHTML = `
     <h2 class="Manual" style="color: orange;">Geolocation Service Failed! :(</h2>
     <h3 class="Manual" style="color: white;">Enter your location here</h3>
@@ -129,6 +132,7 @@ function ManLoc(poss) {
       }
       else {
         check2=true;
+        fr=false;
         map.setCenter(coords);
         map.setZoom(15);
         infoWindow.setPosition(coords);
@@ -166,15 +170,11 @@ function Entered(destinations) {
 
 function Router(){
   if (check1==true && check2==true) {
-    //Show the safest route once this if statement is true to run.
+    //Show the safest route once this if statement runs.
     console.log("It's routing time!")
-    //ATTEMPT TO PUT CALC BUTTON ON MAP BUT IT IS SEEMS TO BE CLICKED WHEN ROUTER() IS RUN EVEN IF IT HASN'T
-    /*const CalcButton = document.createElement("calc-button");
-    CalcButton.innerHTML = "<strong>Calculate Safest Route</strong>";
-    CalcButton.style.cssText = "color: black; fontSize: 24px; background-color: aquamarine; margin-top: 0.5cm; border-radius: 20px; padding: 10px 20px; margin: auto;";
-    CalcButton.onclick = displaySafestRoute(pos, destination);
-    map.controls[google.maps.ControlPosition.BOTTOM_RIGHT].push(CalcButton);*/
-    container.innerHTML=`<button onclick="displaySafestRoute(pos, destination)" style="background-color: aquamarine; margin-top: 0.5cm; border-radius: 20px; padding: 10px 20px; margin: auto;"><strong>Calculate Safest Route</strong></button><br>
+    container.innerHTML=`<div style="display: flex; align-items: left;">
+      <button onclick="displaySafestRoute(pos, destination)" style="background-color: aquamarine; margin-top: 0.5cm; border-radius: 20px; padding: 10px 20px; margin: auto;"><strong>Calculate Safest Route</strong></button><br>
+    </div><br>
     <div class="destination-input-group">
       <h2 class="Manual" style="color: orange;">Change Starting Point:</h2>
       <input type="text" id="location-input" style="border-radius: 20px;" placeholder=" e.g. GL51 0HG">
@@ -185,12 +185,21 @@ function Router(){
 };
 
 // function to display the safest walking route
-var once=true
 function displaySafestRoute(pos, destination) {
   //Initialises the map again to remove any routes or markers if function had been used previously
-  initMap()
+  initMap();
   infoWindow.setPosition(pos);
-  infoWindow.setContent('<div style="color:black"> Origin </div>');
+  if (fr){
+    infoWindow.setContent('<div style="color:black"> Location </div>');
+    container.innerHTML = ``
+    document.getElementById("intro").innerHTML = `<h1>Your Trusted Companion</h1>
+    <h4>Walk with confidence knowing you are on the safest route to your destination.</h4><br>
+    <label>RELAUNCH SAFERWALK TO CHANGE DESTINATION</label>
+    `
+  }
+  else{
+    infoWindow.setContent('<div style="color:black"> Origin </div>');
+  };
   infoWindow.open(map);
 
   const directionsService = new google.maps.DirectionsService();
@@ -265,24 +274,135 @@ function displaySafestRoute(pos, destination) {
       safest.setMap(map);
       //display shortest route in blue as well
       directionsRenderer.setDirections(result);
+      //Displays the ETA and riskscore per route
+      const shortETA = routes[0].legs[0].duration.text;
+      const shortRisk = riskScores[0];
+      const safeETA = routes[minIndex].legs[0].duration.text;
+      const safeRisk = riskScores[minIndex];
+
+      const info = document.getElementById("times");
+      if (minIndex != 0){
+      info.innerHTML = `<h3> SAFEST ROUTE --> <span style="color: green;"> Green Path </span> </h3>
+      <ul>
+        <li> Risk Score: ${safeRisk} </li>
+        <li> Travel Time: ${safeETA} </li>
+      </ul><br>
+      <h3> SHORTEST ROUTE --> <span style="color: blue;">Blue Path </span></h3>
+      <ul>
+        <li> Risk Score: ${shortRisk} </li>
+        <li> Travel Time: ${shortETA} </li>
+      </ul><br>
+      `
+      }
+      else{
+        info.innerHTML = `<h3> ROUTE DETAILS <h3>
+        <ul>
+          <li> Risk Score: ${safeRisk} </li>
+          <li> Travel Time: ${safeETA} </li>
+        </ul><br>
+        `
+      };
+      if (riskScores.length > 2) {
+      const notice = document.createElement("notice");
+      notice.innerHTML = `<p><strong>(Other routes --></strong><span style="color: red;"> thin red path</span><strong>)</strong> </p>`;
+      info.appendChild(notice);
+      };
       //Puts a marker at the destination location as well
       var destMarker= new google.maps.InfoWindow();
       destMarker.setPosition(destination);
       destMarker.setContent('<div style="color:black"> Destination </div>');
       destMarker.open(map);
+
+      //If following the map using location, route updates every 15 seconds to refresh your location using recursion
+      setTimeout(function(){
+        if (fr){
+            if (navigator.geolocation) {
+              navigator.geolocation.getCurrentPosition(
+                (position) => { //Updates the pos object with the attributes lat and lng
+                  pos = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude,
+                  };
+                  console.log("Refreshed");
+                  console.log(Math.abs(destination.lat - pos.lat));
+                  if (Math.abs(destination.lat - pos.lat) <= 0.0002) { //If location and destination are within 20m of each other
+                    locationButton.textContent = "YOU HAVE REACHED YOUR DESTINATION!";
+                    map.controls[google.maps.ControlPosition.TOP_CENTER].push(locationButton);
+                    document.getElementById("minimap").innerHTML=``;
+                    
+                  }
+                  else{
+                    displaySafestRoute(pos, destination);
+                  };
+                });
+            } else{ alert("Geolocation no longer works"); fr=false;};
+        };
+      }, 15000);
+
     } else {
       alert("Directions request failed due to " + status);
     }
   });
 };
 
+function Namer(User){
+  user = User
+  document.getElementById("lister").innerHTML = `<ul id="list">
+    <h3>${User}'s contacts Alerted upon SOS button press:</h3>
+  </ul>
+  `
+  const transform = document.getElementById("form")
+  transform.innerHTML= `<h2>EMERGENCY CONTACTS</h2>
+  <h3>Enter the details of an emergency contact here:</h3>
+  <input type="text" id="name-input" style="border-radius: 20px;" placeholder=" Name">
+  <input type="text" id="email-input" style="border-radius: 20px;" placeholder=" Email Address">
+  <button id="add-button" onclick="Add(document.getElementById('name-input').value.trim(), document.getElementById('email-input').value.trim())" style="border: black; background-color:aquamarine; margin-top: 0.5cm; border-radius: 20px; padding: 10px 20px; margin: auto;">Add</button>
+`
+};
+
+var first = true
+function Add(names, emails) {
+  if (names == "" || emails == ""){
+    alert("You MUST enter values for name AND email!")
+  }
+  else{
+    if (emails.includes("@") && emails.includes(".")){
+      contacts.push({
+        name: names,
+        email: emails,
+      });
+      if (first){
+        document.getElementById("SOS").innerHTML = `<img src="SOS.png" onclick="SOS()" height="100 vh">`
+        first=false
+      };
+      const addition = document.createElement("record");
+      addition.innerHTML = `<li> ${names}  || ${emails} </li>`;
+      document.getElementById("list").appendChild(addition);
+
+      document.getElementById("name-input").value = ""
+      document.getElementById("email-input").value = ""
+    }
+    else{
+      alert("Please make sure you've entered a valid email address")
+      document.getElementById("email-input").value = ""
+    };
+  };
+};
+
+function SOS(){
+  for (let i = 0; i < contacts.length; i++) {
+    if (fr){
+      alert(`<SendTo: ${contacts[i].email}> || Dear ${contacts[i].name}, ${user} is in trouble at geocoordinates: ${pos.lat}, ${pos.lng}! Please contact them and make sure they're safe!`)
+    }
+    else{
+      alert(`Dear ${contacts[i].name}, ${user} is in trouble on the streets! Please contact them and make sure they're safe!`)
+    };
+  };
+};
+
+
+
 //Need to add in some of my own validation and comment in some validation label comments where the API handles errors and validates inputs
-//Need to get the user to enter their emergency contacts after they click get route to make it appear concurrent.
-//A key to say that the blue line is the shortest route and the green line is the safest
-//Display the risk score of the shortest route and the safest route in the key below as well
-//Make the location InfoWindow change position as every 10 seconds as you move
-//Display the time it will take to get to the destination for the shortest route and the safest route
-//Make sure there's always an option at the bottom to enter a new location starting point.
 //In the future add user settings like crime sensitivity which affects how much distance from your route a crime can affect the riskscore or certain types of crime have more risk points
 
 /*ERRORS FIXED
@@ -294,4 +414,6 @@ Problem with getting all the routes or safest route to show up
 Learnt that so many problems were solved by reading the Google Maps Platform documentation
 Learnt JavaScript is heaviy object orientated
 Getting polylines to disappear (solved by just resetting the map)
+Using email addresses instead of phone numbers
+Stopping user from changing destination or starting point if using real-time location to prevent double refreshing
 */

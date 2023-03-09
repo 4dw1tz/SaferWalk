@@ -22,7 +22,7 @@
 
     <main>
         <section class="hero">
-            <div>
+            <div id="intro">
                 <h1>Your Trusted Companion</h1>
                 <h4>Walk with confidence knowing you are on the safest route to your destination.</h4><br>
                     <label>Enter your destination to get started!</label>
@@ -46,6 +46,23 @@
             <div class="destination-input-group">
                 <input type="text" id="location-input" style="border-radius: 20px;" placeholder=" e.g. GL51 0HG">
                 <button id="location-button" onclick="ManLoc(document.getElementById('location-input').value.trim())" style="background-color: aquamarine; margin-top: 0.2cm; border-radius: 20px; padding: 1px 20px;">Enter</button>
+            </div>
+        </div>
+        <div style="color: black; background-color: rgb(155, 245, 245); display: flex; justify-content: space-around;">
+            <div id="times">
+            </div>
+            <div id="SOS" style="display: flex; justify-content: center;">
+            </div>
+        </div>
+        <div id="Emergency" style="color: black; background-color: beige; display: flex; justify-content: space-around;">
+            <div id="form">
+                <h2>EMERGENCY CONTACTS</h2>
+                <h3>First enter your name below:</h3>
+                <input type="text" id="user-input" style="border-radius: 20px;" placeholder=" ">
+                <button id="user-button" onclick="Namer(document.getElementById('user-input').value.trim())" style="border: black; background-color:aquamarine; margin-top: 0.5cm; border-radius: 20px; padding: 10px 20px; margin: auto;">Submit</button>
+            </div>
+            <div id="lister">
+            </div>
         </div>
     </main>
     <footer>
