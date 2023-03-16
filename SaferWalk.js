@@ -77,7 +77,7 @@ function initMap() { //Instantiates a map object from the Google Maps API map cl
           reverseGeocode(pos.lat, pos.lng, function(address) {
             //console.log(address);
             if (address != "England" && address != "Wales" && address != "Northern Ireland") {
-              alert("Location must be within the UK (excluding Scotland)")
+              alert("Invalid Location! Make sure it's within the UK (excluding Scotland)")
             }
             else{
               check2=true;
@@ -128,7 +128,7 @@ function ManLoc(poss) {
       //console.log(address);
       if (address != "England" && address != "Wales" && address != "Northern Ireland") {
         document.getElementById("location-input").value = "";
-        alert("Starting point must be within the UK (excluding Scotland)");
+        alert("Invalid Location! Make sure it's within the UK (excluding Scotland)");
       }
       else {
         check2=true;
@@ -146,7 +146,6 @@ function ManLoc(poss) {
 };
 
 function Entered(destinations) {
-  //document.getElementById("destination-input").value = "";
   getCoordinates(destinations, function(coords) {
     console.log("Destination:", coords.lat, coords.lng);
     //INPUT VALIDATION
@@ -154,7 +153,7 @@ function Entered(destinations) {
       //console.log(address);
       if (address != "England" && address != "Wales" && address != "Northern Ireland") {
         document.getElementById("destination-input").value = "";
-        alert("Destination must be within the UK (excluding Scotland)");
+        alert("Invalid Location! Make sure it's within the UK (excluding Scotland)");
       }
       else{
         check1=true;
@@ -165,8 +164,8 @@ function Entered(destinations) {
         Router();
       };
     });    
-  });  
-}
+  });
+};
 
 function Router(){
   if (check1==true && check2==true) {
@@ -252,10 +251,10 @@ function displaySafestRoute(pos, destination) {
           const lat = path[j].lat();
           const lng = path[j].lng();
           // search the crimes array for any crime at the current position
-          const crime = crimes.find((c) => Math.abs(c.lat - lat) <= 0.001 && Math.abs(c.lng - lng) <= 0.001); //This will count a crime if it has occured within a 100m vicinity of this point on the route.
-          //In this case c is just a parameter created that represents each crime object in the array (like i or j in a for loop.)
-          if (crime) {
-            riskScore++;
+          for (let k=0; k < crimes.length; k++){
+            if (Math.abs(crimes[k].lat - lat) <= 0.001 && Math.abs(crimes[k].lng - lng) <= 0.001) {//Increments the riskScore for every crime that's occurred within 100m of this point onroute
+              riskScore++;
+            };
           };
         };
         riskScores.push(riskScore);
@@ -329,7 +328,8 @@ function displaySafestRoute(pos, destination) {
                     locationButton.textContent = "YOU HAVE REACHED YOUR DESTINATION!";
                     map.controls[google.maps.ControlPosition.TOP_CENTER].push(locationButton);
                     document.getElementById("minimap").innerHTML=``;
-                    
+                    document.getElementById("times").innerHTML = `<h2><strong>Thank You for Travelling Safely with Saferwalk!</strong><h2>`;
+                    fr=false
                   }
                   else{
                     displaySafestRoute(pos, destination);
@@ -346,18 +346,24 @@ function displaySafestRoute(pos, destination) {
 };
 
 function Namer(User){
-  user = User
-  document.getElementById("lister").innerHTML = `<ul id="list">
-    <h3>${User}'s contacts Alerted upon SOS button press:</h3>
-  </ul>
+  if (User != ""){
+    user = User
+    document.getElementById("lister").innerHTML = `<ul id="list">
+      <h3>${User}'s contacts Alerted upon SOS button press:</h3>
+    </ul>
+    `
+    document.getElementById("lister").style = "border: 1px solid black; padding: 2%; padding-top: 0.1%;";
+    const transform = document.getElementById("form")
+    transform.innerHTML= `<h2>EMERGENCY CONTACTS</h2>
+    <h3>Enter the details of an emergency contact here:</h3>
+    <input type="text" id="name-input" style="border-radius: 20px;" placeholder=" Name">
+    <input type="text" id="email-input" style="border-radius: 20px;" placeholder=" Email Address">
+    <button id="add-button" onclick="Add(document.getElementById('name-input').value.trim(), document.getElementById('email-input').value.trim())" style="border: black; background-color:aquamarine; margin-top: 0.5cm; border-radius: 20px; padding: 10px 20px; margin: auto;">Add</button>
   `
-  const transform = document.getElementById("form")
-  transform.innerHTML= `<h2>EMERGENCY CONTACTS</h2>
-  <h3>Enter the details of an emergency contact here:</h3>
-  <input type="text" id="name-input" style="border-radius: 20px;" placeholder=" Name">
-  <input type="text" id="email-input" style="border-radius: 20px;" placeholder=" Email Address">
-  <button id="add-button" onclick="Add(document.getElementById('name-input').value.trim(), document.getElementById('email-input').value.trim())" style="border: black; background-color:aquamarine; margin-top: 0.5cm; border-radius: 20px; padding: 10px 20px; margin: auto;">Add</button>
-`
+  }
+  else{
+    alert("Please make sure you've entered a value!");
+  };
 };
 
 var first = true
@@ -389,13 +395,20 @@ function Add(names, emails) {
   };
 };
 
+const audio = new Audio("Ringtone.mp3");
 function SOS(){
+  const answer = document.createElement("answer");
+  answer.innerHTML = `<img src="Call.png">`;
+  answer.onclick = function(){audio.pause(); document.getElementById("SOS").removeChild(answer)};
+  document.getElementById("SOS").appendChild(answer);
+  audio.play();
+
   for (let i = 0; i < contacts.length; i++) {
     if (fr){
       alert(`<SendTo: ${contacts[i].email}> || Dear ${contacts[i].name}, ${user} is in trouble at geocoordinates: ${pos.lat}, ${pos.lng}! Please contact them and make sure they're safe!`)
     }
     else{
-      alert(`Dear ${contacts[i].name}, ${user} is in trouble on the streets! Please contact them and make sure they're safe!`)
+      alert(`<SendTo: ${contacts[i].email}> || Dear ${contacts[i].name}, ${user} is in trouble on the streets! Please contact them and make sure they're safe!`)
     };
   };
 };
