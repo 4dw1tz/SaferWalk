@@ -6,7 +6,7 @@ var check2=false;
 var contacts = []
 var fr = false
 
-//Have to use callback instead of return as geocoder.geocode() is from the Google Maps API script which is linked asynchronously
+//Have to use callback instead of return as geocoder.geocode() is linked asynchronously
 function getCoordinates(address, callback) {  
   var geocoder = new google.maps.Geocoder();
   geocoder.geocode({ address: address }, function(results, status) {
@@ -16,12 +16,13 @@ function getCoordinates(address, callback) {
       var coords = { lat: latitude, lng: longitude };
       callback(coords);
     } else {
-      //This validates the input. If the user entered an invalid place neame, the following is returned
-      callback("Geocode was not successful for the following reason: " + status);
-    }
+        callback("Geocode was not successful for the following reason: " + status);
+    };
   });
 };
-//This function returns the specific country within UK that some coordinates falls within as crime data only spans Eng, Wales, NI
+
+//This function returns the specific country within UK that coordinates fall within as crime data only spans
+//Eng, Wales, NI
 function reverseGeocode(latitude, longitude, callback) {
   const geocoder = new google.maps.Geocoder();
   const latlng = new google.maps.LatLng(latitude, longitude);
@@ -107,7 +108,7 @@ function handleLocationError(browserHasGeolocation, infoWindow, pos) {
     <h2 class="Manual" style="color: orange;">Geolocation Service Failed! :(</h2>
     <h3 class="Manual" style="color: white;">Enter your location here</h3>
     <div class="destination-input-group">
-        <input type="text" id="location-input" style="border-radius: 20px;" placeholder=" e.g. GL51 0HG">
+        <input type="text" id="location-input" style="border-radius: 20px;" placeholder=" e.g. Big Ben | GL51 0HG">
         <button id="location-button" onclick="ManLoc(document.getElementById('location-input').value.trim())" style="background-color: aquamarine; margin-top: 0.2cm; border-radius: 20px; padding: 1px 20px;">Enter</button>
   `;
   infoWindow.setPosition(pos);
@@ -115,6 +116,10 @@ function handleLocationError(browserHasGeolocation, infoWindow, pos) {
   //infoWindow.open(map);
   map.setZoom(6)
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+  initMap();
+}, false);
 window.initMap = initMap;
 //pos = user location as an object with attributes lat and lng storing coordinate values.
 
@@ -150,7 +155,6 @@ function Entered(destinations) {
     console.log("Destination:", coords.lat, coords.lng);
     //INPUT VALIDATION
     reverseGeocode(coords.lat, coords.lng, function(address) {
-      //console.log(address);
       if (address != "England" && address != "Wales" && address != "Northern Ireland") {
         document.getElementById("destination-input").value = "";
         alert("Invalid Location! Make sure it's within the UK (excluding Scotland)");
@@ -172,11 +176,11 @@ function Router(){
     //Show the safest route once this if statement runs.
     console.log("It's routing time!")
     container.innerHTML=`<div style="display: flex; align-items: left;">
-      <button onclick="displaySafestRoute(pos, destination)" style="background-color: aquamarine; margin-top: 0.5cm; border-radius: 20px; padding: 10px 20px; margin: auto;"><strong>Calculate Safest Route</strong></button><br>
+      <button onclick="displaySafestRoute(pos, destination)" style="font-size: 2vh; background-color: aquamarine; margin-top: 0.5cm; border-radius: 20px; padding: 10px 20px; margin: auto;"><strong>Calculate Safest Route</strong></button><br>
     </div><br>
     <div class="destination-input-group">
       <h2 class="Manual" style="color: orange;">Change Starting Point:</h2>
-      <input type="text" id="location-input" style="border-radius: 20px;" placeholder=" e.g. GL51 0HG">
+      <input type="text" id="location-input" style="border-radius: 20px;" placeholder=" e.g. Big Ben | GL51 0HG">
       <button id="location-button" onclick="ManLoc(document.getElementById('location-input').value.trim())" style="background-color: aquamarine; margin-top: 0.2cm; border-radius: 20px; padding: 1px 20px;">Enter</button>
     </div>
       `;
@@ -193,7 +197,7 @@ function displaySafestRoute(pos, destination) {
     container.innerHTML = ``
     document.getElementById("intro").innerHTML = `<h1>Your Trusted Companion</h1>
     <h4>Walk with confidence knowing you are on the safest route to your destination.</h4><br>
-    <label>RELAUNCH SAFERWALK TO CHANGE DESTINATION</label>
+    <button id="destination-button" onclick="location.reload()" style="margin-top: 0.2cm; background-color: aquamarine; border-radius: 20px; padding: 10px 20px;">Change Origin/ Destination</button>
     `
   }
   else{
@@ -378,7 +382,7 @@ function Add(names, emails) {
         email: emails,
       });
       if (first){
-        document.getElementById("SOS").innerHTML = `<img src="SOS.png" onclick="SOS()" height="100 vh">`
+        document.getElementById("SOS").innerHTML = `<img id="SOS-but" src="SOS.png" onclick="SOS()" height="100 vh">`
         first=false
       };
       const addition = document.createElement("record");
@@ -399,8 +403,14 @@ const audio = new Audio("Ringtone.mp3");
 function SOS(){
   const answer = document.createElement("answer");
   answer.innerHTML = `<img src="Call.png">`;
-  answer.onclick = function(){audio.pause(); document.getElementById("SOS").removeChild(answer)};
+  answer.onclick = function(){
+    audio.pause();
+    document.getElementById("SOS").removeChild(answer);
+    document.getElementById("SOS-but").style.display = "block";
+  };
   document.getElementById("SOS").appendChild(answer);
+  document.getElementById("SOS-but").style.display = "none";
+  audio.currentTime = 0;
   audio.play();
 
   for (let i = 0; i < contacts.length; i++) {
@@ -419,14 +429,34 @@ function SOS(){
 //In the future add user settings like crime sensitivity which affects how much distance from your route a crime can affect the riskscore or certain types of crime have more risk points
 
 /*ERRORS FIXED
-Police data UK API not responding
+User put their first contacts name where they should’ve put their own name, so I had to make that instruction clearer
 JavaScript unable to read csv file
-Geocoder.geocode method being asynchronous so needing to use callback instead of return like a normal function
 Problem with using the same variable pos as global variable in Manloc function
 Problem with getting all the routes or safest route to show up
-Learnt that so many problems were solved by reading the Google Maps Platform documentation
-Learnt JavaScript is heaviy object orientated
 Getting polylines to disappear (solved by just resetting the map)
+Stopping user from keeping on clicking SOS button
 Using email addresses instead of phone numbers
 Stopping user from changing destination or starting point if using real-time location to prevent double refreshing
 */
+
+document.addEventListener("DOMContentLoaded", function () {
+  const fadeInSections = document.querySelectorAll(".fade-in-section");
+
+  const fadeInObserver = new IntersectionObserver(
+    function (entries, observer) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("visible");
+          observer.unobserve(entry.target);
+        }
+      });
+    },
+    {
+      threshold: 0.1,
+    }
+  );
+
+  fadeInSections.forEach(function (section) {
+    fadeInObserver.observe(section);
+  });
+});
