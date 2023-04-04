@@ -4,6 +4,7 @@ var map, infoWindow, locationButton, pos, destination, check1, check2, user;
 var check1=false;
 var check2=false;
 var contacts = []
+var timeoutID = null;
 var fr = false
 
 //Have to use callback instead of return as geocoder.geocode() is linked asynchronously
@@ -91,19 +92,21 @@ function initMap() { //Instantiates a map object from the Google Maps API map cl
             };
           });
         },
-        () => { 
-          handleLocationError(true, infoWindow, map.getCenter());
+        () => {
+          //Browser supports geolocation however an error occurred retrieving location coordinates from the GPS (exception statement to prevent crash) 
+          handleLocationError(infoWindow);
         }
       );
     } else {
       // Browser doesn't support Geolocation
-      handleLocationError(false, infoWindow, map.getCenter());
+      handleLocationError(infoWindow);
     }
   });
 }
-function handleLocationError(browserHasGeolocation, infoWindow, pos) {
-  //This handles the error that occurs in the event that the user's GPS couldn't be accessed so they input a starting point manually.
-  fr=false
+function handleLocationError(infoWindow) {
+  //Both error cases result in the same handling. The div beneath the map presents a "geolocation service failed" message and the user is prompted to input their location manually
+  alert("We can't access your location at the moment, please input your location manually");
+  fr=false;
   container.innerHTML = `
     <h2 class="Manual" style="color: orange;">Geolocation Service Failed! :(</h2>
     <h3 class="Manual" style="color: white;">Enter your location here</h3>
@@ -111,11 +114,10 @@ function handleLocationError(browserHasGeolocation, infoWindow, pos) {
         <input type="text" id="location-input" style="border-radius: 20px;" placeholder=" e.g. Big Ben | GL51 0HG">
         <button id="location-button" onclick="ManLoc(document.getElementById('location-input').value.trim())" style="background-color: aquamarine; margin-top: 0.2cm; border-radius: 20px; padding: 1px 20px;">Enter</button>
   `;
-  infoWindow.setPosition(pos);
-  infoWindow.setContent('<div style="color:black"> Geolocation Service Failed</div>');
-  //infoWindow.open(map);
-  map.setZoom(6)
-}
+
+  //This will get rid of the infoWindow had one already been openned showing a location in a previous iteration of the program
+  infoWindow.close();
+};
 
 document.addEventListener('DOMContentLoaded', function() {
   initMap();
@@ -165,6 +167,7 @@ function Entered(destinations) {
         const url = `https://maps.google.com/maps?q=${coords.lat},${coords.lng}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
         minimap.innerHTML = `<iframe src="${url}" width="100%" height="400 vh" frameborder="0" scrolling="no"> </iframe>`;
         destination=coords;
+        clearTimeout(timeoutID);
         Router();
       };
     });    
@@ -173,7 +176,8 @@ function Entered(destinations) {
 
 function Router(){
   if (check1==true && check2==true) {
-    //Show the safest route once this if statement runs.
+    if (pos.lat != destination.lat && pos.lng != destination.lng) {
+    //Show the "calculate safest route" button once this if statement runs.
     console.log("It's routing time!")
     container.innerHTML=`<div style="display: flex; align-items: left;">
       <button onclick="displaySafestRoute(pos, destination)" style="font-size: 2vh; background-color: aquamarine; margin-top: 0.5cm; border-radius: 20px; padding: 10px 20px; margin: auto;"><strong>Calculate Safest Route</strong></button><br>
@@ -184,7 +188,35 @@ function Router(){
       <button id="location-button" onclick="ManLoc(document.getElementById('location-input').value.trim())" style="background-color: aquamarine; margin-top: 0.2cm; border-radius: 20px; padding: 1px 20px;">Enter</button>
     </div>
       `;
+    } else {
+      alert("Please enter a different destination to your location/ starting point!");
+      //This innerHTML is the original state of the div and it is reverted back to this state if the validation criteria aren't both met again
+      container.innerHTML = `<h2 class="Manual" style="color: orange;">Or...</h2>
+      <h3 class="Manual" style="color: white;">Enter a starting point here</h3>
+      <div class="destination-input-group">
+          <input type="text" id="location-input" style="border-radius: 20px;" placeholder=" e.g. Big Ben | GL51 0HG">
+          <button id="location-button" onclick="ManLoc(document.getElementById('location-input').value.trim())" style="background-color: aquamarine; margin-top: 0.2cm; border-radius: 20px; padding: 1px 20px;">Enter</button>
+      `;
+    };
   };
+};
+
+var crimes = [];
+// read the Crimes.js file
+var db = Crimes;
+var rows = db.split("\n");
+// Parse the crime data and store each crime record as an object in the crimes array
+for (let i = 1; i < rows.length; i++) {
+  var cols = rows[i].split(",");
+  //Each crime record is converted to an object with the columns as attributes
+  var crime = {
+    month: cols[0],
+    fallsWithin: cols[1],
+    lng: parseFloat(cols[2]),
+    lat: parseFloat(cols[3]),
+    crimeType: cols[4],
+  };
+  crimes.push(crime);
 };
 
 // function to display the safest walking route
@@ -194,41 +226,21 @@ function displaySafestRoute(pos, destination) {
   infoWindow.setPosition(pos);
   if (fr){
     infoWindow.setContent('<div style="color:black"> Location </div>');
-    container.innerHTML = ``
-    document.getElementById("intro").innerHTML = `<h1>Your Trusted Companion</h1>
-    <h4>Walk with confidence knowing you are on the safest route to your destination.</h4><br>
-    <button id="destination-button" onclick="location.reload()" style="margin-top: 0.2cm; background-color: aquamarine; border-radius: 20px; padding: 10px 20px;">Change Origin/ Destination</button>
-    `
   }
   else{
     infoWindow.setContent('<div style="color:black"> Origin </div>');
   };
   infoWindow.open(map);
 
+  // Initialize the Google Maps Directions Service to calculate routes
   const directionsService = new google.maps.DirectionsService();
   const directionsRenderer = new google.maps.DirectionsRenderer({
     map: map,
     suppressMarkers: true,
   });
+  // Array to store the risk scores for each calculated route
   var riskScores=[];
-  var crimes = [];
-
-  // read the Crimes.js file
-  var csv = Crimes;
-  var rows = csv.split("\n");
-  //Each crime object is appended to the crimes list
-  for (let i = 1; i < rows.length; i++) {
-    var cols = rows[i].split(",");
-    //Each crime record is converted to an object with the columns as attributes
-    var crime = {
-      month: cols[0],
-      fallsWithin: cols[1],
-      lng: parseFloat(cols[2]),
-      lat: parseFloat(cols[3]),
-      crimeType: cols[4],
-    };
-    crimes.push(crime);
-  };
+ 
   // calculate walking directions from pos to destination
   const request = {
     origin: pos,
@@ -236,11 +248,14 @@ function displaySafestRoute(pos, destination) {
     travelMode: "WALKING",
     provideRouteAlternatives: true,
   };
+
+  // Request walking routes from the Directions Service and process the results to calculate risk scores and display the safest and shortest routes
   directionsService.route(request, (result, status) => {
     if (status == "OK") {
       // calculate the risk score for each route
       const routes = result.routes;
       console.log("Number of possible routes:", routes.length);
+      // Iterate through all routes to calculate their risk scores based on the number of crimes near each point along the route
       for (let i = 0; i < routes.length; i++) {
         const path = routes[i].overview_path;
         let riskScore = 0;
@@ -304,7 +319,15 @@ function displaySafestRoute(pos, destination) {
           <li> Travel Time: ${safeETA} </li>
         </ul><br>
         `
+        // Display a notice if there's another route available
+        if (riskScores.length == 2) {
+          const notice = document.createElement("notice");
+          notice.innerHTML = `<p><strong>(Other routes --></strong><span style="color: red;"> thin red path</span><strong>)</strong> </p>`;
+          info.appendChild(notice);
+        };
       };
+
+      // Display a notice if there are more than two alternative routes available
       if (riskScores.length > 2) {
       const notice = document.createElement("notice");
       notice.innerHTML = `<p><strong>(Other routes --></strong><span style="color: red;"> thin red path</span><strong>)</strong> </p>`;
@@ -317,7 +340,7 @@ function displaySafestRoute(pos, destination) {
       destMarker.open(map);
 
       //If following the map using location, route updates every 15 seconds to refresh your location using recursion
-      setTimeout(function(){
+      timeoutID=setTimeout(function(){
         if (fr){
             if (navigator.geolocation) {
               navigator.geolocation.getCurrentPosition(
@@ -327,13 +350,12 @@ function displaySafestRoute(pos, destination) {
                     lng: position.coords.longitude,
                   };
                   console.log("Refreshed");
-                  console.log(Math.abs(destination.lat - pos.lat));
-                  if (Math.abs(destination.lat - pos.lat) <= 0.0002) { //If location and destination are within 20m of each other
+                  if (Math.abs(destination.lat - pos.lat) <= 0.0002 && Math.abs(destination.lng - pos.lng) <= 0.0002) {//If location and destination are within 20m of each other
                     locationButton.textContent = "YOU HAVE REACHED YOUR DESTINATION!";
                     map.controls[google.maps.ControlPosition.TOP_CENTER].push(locationButton);
                     document.getElementById("minimap").innerHTML=``;
                     document.getElementById("times").innerHTML = `<h2><strong>Thank You for Travelling Safely with Saferwalk!</strong><h2>`;
-                    fr=false
+                    fr=false;
                   }
                   else{
                     displaySafestRoute(pos, destination);
@@ -345,7 +367,7 @@ function displaySafestRoute(pos, destination) {
 
     } else {
       alert("Directions request failed due to " + status);
-    }
+    };
   });
 };
 
@@ -360,8 +382,8 @@ function Namer(User){
     const transform = document.getElementById("form")
     transform.innerHTML= `<h2>EMERGENCY CONTACTS</h2>
     <h3>Enter the details of an emergency contact here:</h3>
-    <input type="text" id="name-input" style="border-radius: 20px;" placeholder=" Name">
-    <input type="text" id="email-input" style="border-radius: 20px;" placeholder=" Email Address">
+    <input type="text" id="name-input" maxlength="20" style="border-radius: 20px;" placeholder=" Name">
+    <input type="text" id="email-input" maxlength="20" style="border-radius: 20px;" placeholder=" Email Address">
     <button id="add-button" onclick="Add(document.getElementById('name-input').value.trim(), document.getElementById('email-input').value.trim())" style="border: black; background-color:aquamarine; margin-top: 0.5cm; border-radius: 20px; padding: 10px 20px; margin: auto;">Add</button>
   `
   }
@@ -424,24 +446,9 @@ function SOS(){
 };
 
 
-
-//Need to add in some of my own validation and comment in some validation label comments where the API handles errors and validates inputs
-//In the future add user settings like crime sensitivity which affects how much distance from your route a crime can affect the riskscore or certain types of crime have more risk points
-
-/*ERRORS FIXED
-User put their first contacts name where they should’ve put their own name, so I had to make that instruction clearer
-JavaScript unable to read csv file
-Problem with using the same variable pos as global variable in Manloc function
-Problem with getting all the routes or safest route to show up
-Getting polylines to disappear (solved by just resetting the map)
-Stopping user from keeping on clicking SOS button
-Using email addresses instead of phone numbers
-Stopping user from changing destination or starting point if using real-time location to prevent double refreshing
-*/
-
+//The following function allows the HTML elememts to float in with the .fade-in-section CSS class.
 document.addEventListener("DOMContentLoaded", function () {
   const fadeInSections = document.querySelectorAll(".fade-in-section");
-
   const fadeInObserver = new IntersectionObserver(
     function (entries, observer) {
       entries.forEach(function (entry) {
@@ -455,7 +462,6 @@ document.addEventListener("DOMContentLoaded", function () {
       threshold: 0.1,
     }
   );
-
   fadeInSections.forEach(function (section) {
     fadeInObserver.observe(section);
   });
